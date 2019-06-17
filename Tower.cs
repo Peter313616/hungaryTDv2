@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -40,8 +40,9 @@ namespace hungaryTDv2
         double xMove;
         double yMove;
         BitmapImage bi;
-        int counter = 0;
         double totalMove;
+        Rectangle[] famBullets;
+        Polygon[] famHitboxes;
         public Tower(int tT, Canvas cBack, Canvas cO, int[] p, Point[] t, Point l, Canvas cE)
         {
             towerType = tT;
@@ -119,7 +120,7 @@ namespace hungaryTDv2
             sr.Close();
             MessageBox.Show(myPointCollection.Count.ToString());
             hitBox.Points = myPointCollection;
-            hitBox.Fill = Brushes.Red;
+            hitBox.Fill = Brushes.Transparent;
 
             bullet = new Rectangle();
             bullet.Height = 20;
@@ -180,37 +181,71 @@ namespace hungaryTDv2
                 {
                     if (positions[targets[targets.Count - 1 - i]] != -1)
                     {
-                        target = track[targets[targets.Count - 1 - i]];
-                        double xDistance = target.X - Location.X;
-                        double yDistance = Location.Y - target.Y;
-                        xDistance = target.X - Location.X;
-                        yDistance = Location.Y - target.Y;
-
-                        double TotalDistance = Math.Sqrt(Math.Pow(xDistance, 2) + Math.Pow(yDistance, 2));
-                        double NumbOfTransforms = Math.Ceiling(TotalDistance / bSpeed);
-                        xMove = xDistance / NumbOfTransforms;
-                        yMove = yDistance / NumbOfTransforms;
-
-                        double temp = Math.Atan(xDistance / yDistance);
-                        double angle = temp * 180 / Math.PI;
-
-                        if (target.Y > Location.Y)
+                        if (towerType != 2)
                         {
-                            angle += 180;
+                            target = track[targets[targets.Count - 1 - i]];
+                            double xDistance = target.X - Location.X;
+                            double yDistance = Location.Y - target.Y;
+                            xDistance = target.X - Location.X;
+                            yDistance = Location.Y - target.Y;
+
+                            double TotalDistance = Math.Sqrt(Math.Pow(xDistance, 2) + Math.Pow(yDistance, 2));
+                            double NumbOfTransforms = Math.Ceiling(TotalDistance / bSpeed);
+                            xMove = xDistance / NumbOfTransforms;
+                            yMove = yDistance / NumbOfTransforms;
+
+                            double temp = Math.Atan(xDistance / yDistance);
+                            double angle = temp * 180 / Math.PI;
+
+                            if (target.Y > Location.Y)
+                            {
+                                angle += 180;
+                            }
+                            RotateTransform rotate = new RotateTransform(angle);
+                            bullet.RenderTransformOrigin = new Point(0.5, 0.5);
+                            bullet.RenderTransform = rotate;
+                            Canvas.SetLeft(bullet, Location.X);
+                            Canvas.SetTop(bullet, Location.Y);
+                            hitBox.RenderTransformOrigin = new Point(0.5, 0.5);
+                            hitBox.RenderTransform = rotate;
+                            Canvas.SetLeft(hitBox, Location.X);
+                            Canvas.SetTop(hitBox, Location.Y);
+                            cBackground.Children.Add(bullet);
+                            cBackground.Children.Add(hitBox);
+                            shooting = true;
+                            break;
                         }
-                        RotateTransform rotate = new RotateTransform(angle);
-                        bullet.RenderTransformOrigin = new Point(0.5, 0.5);
-                        bullet.RenderTransform = rotate;
-                        Canvas.SetLeft(bullet, Location.X);
-                        Canvas.SetTop(bullet, Location.Y);
-                        hitBox.RenderTransformOrigin = new Point(0.5, 0.5);
-                        hitBox.RenderTransform = rotate;
-                        Canvas.SetLeft(hitBox, Location.X);
-                        Canvas.SetTop(hitBox, Location.Y);
-                        cBackground.Children.Add(bullet);
-                        cBackground.Children.Add(hitBox);
-                        shooting = true;
-                        break;
+                        else
+                        {
+                            for (int x = 0; x < 8; i++)
+                            {
+                                famBullets[x] = new Rectangle();
+                                famBullets[x].Fill = bullet.Fill;
+                                famBullets[x].Height = bullet.Height;
+                                famBullets[x].Width = bullet.Width;
+                                RotateTransform rotate = new RotateTransform(x * 45);
+                                bullet.RenderTransformOrigin = new Point(0.5, 0.5);
+                                bullet.RenderTransform = rotate;
+                                int xDirection;
+                                int yDirection;
+                                if (x > 0 && x < 4)
+                                {
+                                    xDirection = 1;
+                                }
+                                else if (x == 0 || x == 4)
+                                {
+                                    xDirection = 0;
+                                }
+                                else
+                                {
+                                    xDirection = -1;
+                                }
+                                if (x < 2 || x > 6)
+                                {
+                                    yDirection = 1;
+                                }
+                            }
+                        }
                     }
                 }
                 return null;
