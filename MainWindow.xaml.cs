@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,38 +20,32 @@ namespace hungaryTDv2
     /// </summary>
     public partial class MainWindow : Window
     {
-        public Rectangle background;
-        public Label lblMouseTest;
-        public Button tempTwrBtn;
-        public Rectangle tempRect;
-        public Rectangle healthBar = new Rectangle();
-        public Rectangle damageBar = new Rectangle();
-        public Label lblHealth = new Label();
-        public Label lblMoney = new Label();
-        public bool mouseTest;
-        public Button[] towerIcons = new Button[4];
-        public Button btnStart = new Button();
-        public ImageBrush[] towerFill = new ImageBrush[4];
-        public System.Windows.Threading.DispatcherTimer gameTimer = new System.Windows.Threading.DispatcherTimer();
-        public GameState gameState;
-        public enum GameState { play, store, test };
-        public TowerType towerType;
-        public enum TowerType { normal, police, family, tank }
-        public EnemyType enemyType;
-        public enum EnemyType { apple, pizza, donut, hamburger, fries }
-        public List<Enemy> enemies = new List<Enemy>();
-        public Polygon trackHit = new Polygon();
-        public Point[] track = new Point[1450];
-        public int[] positions = new int[1450];
-        public StreamWriter sw;
-        public StreamReader sr;
-        public int tempTowerType;
-        public int tempCost;
-        public int money = 300;
-        public List<Tower> towers = new List<Tower>();
-        public int level = 0;
-        public int[][] waves = new int[10][];
-        public string[] levelMessages = new string[10];
+        Rectangle background;
+        Button tempTwrBtn;
+        Rectangle tempRect;
+        Rectangle healthBar = new Rectangle();
+        Rectangle damageBar = new Rectangle();
+        Label lblHealth = new Label();
+        Label lblMoney = new Label();
+        Button[] towerIcons = new Button[4];
+        Button btnStart = new Button();
+        ImageBrush[] towerFill = new ImageBrush[4];
+        System.Windows.Threading.DispatcherTimer gameTimer = new System.Windows.Threading.DispatcherTimer();
+        GameState gameState;
+        enum GameState { play, store, test };
+        enum TowerType { normal, police, family, tank }
+        enum EnemyType { apple, pizza, donut, hamburger, fries }
+        List<Enemy> enemies = new List<Enemy>();
+        Polygon trackHit = new Polygon();
+        Point[] track = new Point[1450];
+        int[] positions = new int[1450];
+        StreamReader sr;
+        int tempTowerType;
+        int tempCost;
+        int money = 300;
+        List<Tower> towers = new List<Tower>();
+        int[][] waves = new int[10][];
+        string[] levelMessages = new string[10];
         public MainWindow()
         {
             InitializeComponent();
@@ -166,6 +160,11 @@ namespace hungaryTDv2
                         damageBar.Width += tempDamage;
                         Canvas.SetLeft(damageBar, 825 - damageBar.Width);
                         enemies.RemoveAt(i);
+                        if (damageBar.Width >= 250)
+                        {
+                            MessageBox.Show("Game Over");
+                            Close();
+                        }
                     }
                 }
                 for (int i = 0; i < towers.Count; i++)
