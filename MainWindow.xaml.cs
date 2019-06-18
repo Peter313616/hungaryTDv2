@@ -20,32 +20,43 @@ namespace hungaryTDv2
     /// </summary>
     public partial class MainWindow : Window
     {
-        Rectangle background;
-        Button tempTwrBtn;
-        Rectangle tempRect;
-        Rectangle healthBar = new Rectangle();
-        Rectangle damageBar = new Rectangle();
-        Label lblHealth = new Label();
-        Label lblMoney = new Label();
-        Button[] towerIcons = new Button[4];
-        Button btnStart = new Button();
-        ImageBrush[] towerFill = new ImageBrush[4];
-        System.Windows.Threading.DispatcherTimer gameTimer = new System.Windows.Threading.DispatcherTimer();
-        GameState gameState;
-        enum GameState { play, store, test };
-        enum TowerType { normal, police, family, tank }
-        enum EnemyType { apple, pizza, donut, hamburger, fries }
-        List<Enemy> enemies = new List<Enemy>();
-        Polygon trackHit = new Polygon();
-        Point[] track = new Point[1450];
-        int[] positions = new int[1450];
-        StreamReader sr;
-        int tempTowerType;
-        int tempCost;
-        int money = 300;
-        List<Tower> towers = new List<Tower>();
-        int[][] waves = new int[10][];
-        string[] levelMessages = new string[10];
+        public Rectangle background;
+        public Label lblMouseTest;
+        public Button tempTwrBtn;
+        public Rectangle tempRect;
+        //
+        public Ellipse tempCirc;
+        //
+        public Rectangle healthBar = new Rectangle();
+        public Rectangle damageBar = new Rectangle();
+        public Label lblHealth = new Label();
+        public Label lblMoney = new Label();
+        public bool mouseTest;
+        public Button[] towerIcons = new Button[4];
+        public Button btnStart = new Button();
+        public ImageBrush[] towerFill = new ImageBrush[4];
+        public System.Windows.Threading.DispatcherTimer gameTimer = new System.Windows.Threading.DispatcherTimer();
+        public GameState gameState;
+        public enum GameState { play, store, pause };
+        public TowerType towerType;
+        public enum TowerType { normal, police, family, tank }
+        public EnemyType enemyType;
+        public enum EnemyType { apple, pizza, donut, hamburger, fries }
+        public List<Enemy> enemies = new List<Enemy>();
+        public Polygon trackHit = new Polygon();
+        public Point[] track = new Point[1450];
+        public int[] positions = new int[1450];
+        public StreamWriter sw;
+        public StreamReader sr;
+        public int tempTowerType;
+        public int tempCost;
+        public int money = 300;
+        public List<Tower> towers = new List<Tower>();
+        public int level = 0;
+        public int[][] waves = new int[10][];
+        public string[] levelMessages = new string[10];
+        public Random rand = new Random();
+        bool WasPaused = false;
         public MainWindow()
         {
             InitializeComponent();
@@ -73,23 +84,24 @@ namespace hungaryTDv2
             sr.Close();
             gameState = GameState.play;
             counter = 0;
-            sr = new StreamReader("levels.txt");
+            sr = new StreamReader("levels1.txt");
             while (!sr.EndOfStream)
             {
-                string currentLine;
-                currentLine = sr.ReadLine();
-                try
+                string currentLine = sr.ReadLine();
+                string[] lineSplit = currentLine.Split(',');
+                waves[counter] = new int[lineSplit.Length];
+                for (int i = 0; i < lineSplit.Length; i++)
                 {
-                    string[] lineSplit = currentLine.Split();
-                    for(int i = 0; i < lineSplit.Length; i++)
-                    {
-                        int.TryParse(lineSplit[i], out waves[counter/2][i]);
-                    }
+                    int.TryParse(lineSplit[i], out waves[counter][i]);
                 }
-                catch
-                {
-                    levelMessages[counter / 2] = currentLine;
-                }
+                counter++;
+            }
+            counter = 0;
+            sr = new StreamReader("levels2.txt");
+            while (!sr.EndOfStream)
+            {
+                string currentLine = sr.ReadLine();
+                levelMessages[counter] = currentLine;
                 counter++;
             }
         }
@@ -100,6 +112,8 @@ namespace hungaryTDv2
             {
                 Canvas.SetTop(tempRect, Mouse.GetPosition(cBackground).Y - tempRect.Height / 2);
                 Canvas.SetLeft(tempRect, Mouse.GetPosition(cBackground).X - tempRect.Width / 2);
+                Canvas.SetTop(tempCirc, Mouse.GetPosition(cBackground).Y - tempCirc.Height / 2);
+                Canvas.SetLeft(tempCirc, Mouse.GetPosition(cBackground).X - tempCirc.Width / 2);
                 bool valid = true;
                 double x = Mouse.GetPosition(cBackground).X;
                 double y = Mouse.GetPosition(cBackground).Y;
@@ -127,6 +141,7 @@ namespace hungaryTDv2
                     {
                         Point temp = Mouse.GetPosition(cBackground);
                         cBackground.Children.Remove(tempRect);
+                        cBackground.Children.Remove(tempCirc);
                         Tower newTower = new Tower(tempTowerType, cBackground, cObstacles, positions, track, temp, cEnemies);
                         towers.Add(newTower);
                         money -= tempCost;
@@ -135,39 +150,61 @@ namespace hungaryTDv2
                     else
                     {
                         cBackground.Children.Remove(tempRect);
+                        cBackground.Children.Remove(tempCirc);
                     }
                     cObstacles.Children.Remove(trackHit);
-                    gameState = GameState.play;
+                    if (WasPaused == true)
+                    {
+                        gameState = GameState.pause;
+                    }
+                    else
+                    {
+                        gameState = GameState.play;
+                    }
                 }
                 else
                 {
                     pmbs = Mouse.LeftButton;
                 }
             }
-            else if (gameState == GameState.test)
+            else if (gameState == GameState.pause)
             {
+
             }
             else if (gameState == GameState.play)
             {
                 if (enemies.Count == 0)
                 {
-                }
-                for (int i = enemies.Count - 1; i > -1; i--)
-                {
-                    int tempDamage = enemies[i].update(i);
-                    if (tempDamage > 0)
+                    if (level < 10)
                     {
-                        damageBar.Width += tempDamage;
-                        Canvas.SetLeft(damageBar, 825 - damageBar.Width);
-                        enemies.RemoveAt(i);
-                        if (damageBar.Width >= 250)
+                        for (int i = 0; i < waves[level].Length; i++)
                         {
-                            MessageBox.Show("Game Over");
-                            Close();
+                            enemies.Add(new Enemy(waves[level][i], cEnemies, cBackground, track, positions));
                         }
+                        MessageBox.Show(levelMessages[level]);
+
+                        gameState = GameState.pause;
+                        Button PausedGame = new Button();
+                        PausedGame.Content = "Click here to go to next wave";
+                        PausedGame.Click += PausedGame_Click;
+                        PausedGame.Background = Brushes.Gray;
+                        cBackground.Children.Add(PausedGame);
                     }
+                    else
+                    {
+                        for (int i = 0; i < level * level; i++)
+                        {
+                            enemies.Add(new Enemy(rand.Next(5), cEnemies, cBackground, track, positions));
+                        }
+                        MessageBox.Show("Level " + level);
+                    }
+                    level++;
+                    /*for (int i = enemies.Count - 1; i > -1; i--)
+                    {
+                        enemies[i].update(i);
+                    }*/
                 }
-                for (int i = 0; i < towers.Count; i++)
+                for (int i = 0; i < towers.Count; i++)//loops through each tower
                 {
                     List<Shape> hits = towers[i].Shoot();
                     if (hits != null && hits.Count > 0)
@@ -178,7 +215,17 @@ namespace hungaryTDv2
                             {
                                 if (enemies[y].sprite == hits[x])
                                 {
-                                    enemies[y].health -= towers[i].damage;
+                                    if ((int)enemies[y].type == 2)
+                                    {
+                                        if ((int)towers[i].towerType == 1)
+                                        {
+                                            enemies[y].health -= towers[i].damage;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        enemies[y].health -= towers[i].damage;
+                                    }
                                     if (enemies[y].health <= 0)
                                     {
                                         money += enemies[y].reward;
@@ -198,7 +245,74 @@ namespace hungaryTDv2
                         }
                     }
                 }
+                for (int i = enemies.Count - 1; i > -1; i--)
+                {
+                    int tempDamage = enemies[i].update(i);
+                    if (tempDamage > 0)
+                    {
+                        damageBar.Width += tempDamage;
+                        Canvas.SetLeft(damageBar, 825 - damageBar.Width);
+                        enemies.RemoveAt(i);
+                        if (damageBar.Width >= 250)
+                        {
+                            MessageBox.Show("You Lost");
+                            Close();
+                        }
+                    }
+                }
+                /*string tempEnemies = "";
+                for (int i = 1; i < positions.Length + 1; i++)
+                {
+                    int index = positions[positions.Length - i];
+                    if (index != -1)
+                    {
+                        if (!tempEnemies.Contains(index.ToString()))
+                        {
+                            tempEnemies += index.ToString();
+                            int tempDamage = enemies[index].update(index);
+                            if (tempDamage > 0)
+                            {
+                                damageBar.Width += tempDamage;
+                                Canvas.SetLeft(damageBar, 825 - damageBar.Width);
+                                enemies.RemoveAt(index);
+                                if (damageBar.Width > 825)
+                                {
+                                    MessageBox.Show("You Lost");
+                                    Close();
+                                }
+                            }
+                        }
+                    }
+                }*/
+
+
+                //new check because of bugs, inefficient way to do it, but we couldn't debug what was happening
+
+                for (int i = 0; i < positions.Length; i++)
+                {
+                    int index = positions[i];
+                    if (positions[i] != -1)
+                    {
+                        if (index < enemies.Count)
+                        {
+
+                            if (enemies[index].position + 9 < i || enemies[index].position - 9 > i)
+                            {
+                                positions[i] = -1;
+                            }
+                        }
+                        else
+                        {
+                            positions[i] = -1;
+                        }
+                    }
+                }
             }
+        }
+
+        private void PausedGame_Click(object sender, RoutedEventArgs e)
+        {
+            gameState = GameState.play;
         }
 
         private void BtnStart_Click(object sender, RoutedEventArgs e)
@@ -231,15 +345,6 @@ namespace hungaryTDv2
             background.Fill = img;
             cBackground.Children.Add(background);
 
-            tempTwrBtn = new Button();
-            tempTwrBtn.Height = 20;
-            tempTwrBtn.Width = 40;
-            tempTwrBtn.Content = "test";
-            tempTwrBtn.Click += TempTwrBtn_Click;
-            Canvas.SetTop(tempTwrBtn, 17);
-            Canvas.SetLeft(tempTwrBtn, 1000);
-            cBackground.Children.Add(tempTwrBtn);
-
             bi = new BitmapImage(new Uri("normal.png", UriKind.Relative));
             towerFill[0] = new ImageBrush(bi);
             bi = new BitmapImage(new Uri("police.png", UriKind.Relative));
@@ -259,6 +364,37 @@ namespace hungaryTDv2
                 Canvas.SetTop(towerIcons[i], i * 150 + 60);
                 Canvas.SetLeft(towerIcons[i], 910);
                 cBackground.Children.Add(towerIcons[i]);
+                
+                Label towerInfo = new Label();
+                if (i == 0)
+                {
+                    towerInfo.Content = "Cost: 150\n" +
+                    "Range: 100\n" +
+                    "Damage: 25";
+                }
+                else if (i == 1)
+                {
+                    towerInfo.Content = "Cost: 350\n" +
+                    "Range: 300\n" +
+                    "Damage: 50";
+                }
+                else if (i == 2)
+                {
+                    towerInfo.Content = "Cost: 600\n" +
+                    "Range: 80\n" +
+                    "Damage: 10";
+                }
+                else
+                {
+                    towerInfo.Content = "Cost: 2000\n" +
+                    "Range: 100\n" +
+                    "Damage: 500";
+                }
+                towerInfo.FontWeight = FontWeights.Bold;
+                towerInfo.Background = Brushes.SandyBrown;
+                Canvas.SetTop(towerInfo, i * 150 + 70);
+                Canvas.SetLeft(towerInfo, 1020);
+                cBackground.Children.Add(towerInfo);
             }
             gameState = GameState.play;
 
@@ -295,57 +431,85 @@ namespace hungaryTDv2
             lblMoney.FontFamily = new FontFamily("Consola");
             lblMoney.FontSize = 30;
             lblMoney.Height = 50;
-            lblMoney.Width = 100;
+            lblMoney.Width = 200;
             Canvas.SetTop(lblMoney, 10);
             Canvas.SetLeft(lblMoney, 875);
             lblMoney.Content = "$ " + money;
             cBackground.Children.Add(lblMoney);
-
-            enemies.Add(new Enemy((int)EnemyType.hamburger, cEnemies, cBackground, track, positions));
-            enemies.Add(new Enemy((int)EnemyType.apple, cEnemies, cBackground, track, positions));
-            enemies.Add(new Enemy((int)EnemyType.pizza, cEnemies, cBackground, track, positions));
-            enemies.Add(new Enemy((int)EnemyType.pizza, cEnemies, cBackground, track, positions));
-            enemies.Add(new Enemy((int)EnemyType.pizza, cEnemies, cBackground, track, positions));
-        }
-
-        private void TempTwrBtn_Click(object sender, RoutedEventArgs e)
-        {
-            gameState = GameState.test;
         }
         private void iconsClick(object sender, RoutedEventArgs e)
         {
-            //sw.Close();
-            gameState = GameState.store;
-            cObstacles.Children.Add(trackHit);
-            Button button = sender as Button;
-            for (int i = 0; i < towerIcons.Length; i++)
+            if (gameState == GameState.pause)
             {
-                if (towerIcons[i] == button)
+                WasPaused = true;
+            }
+
+            if (gameState != GameState.store)
+            {
+                gameState = GameState.store;
+                cObstacles.Children.Add(trackHit);
+                Button button = sender as Button;
+                for (int i = 0; i < towerIcons.Length; i++)
                 {
-                    tempTowerType = i;
+                    if (towerIcons[i] == button)
+                    {
+                        tempTowerType = i;
+                    }
                 }
+                tempRect = new Rectangle();
+                tempRect.Fill = towerFill[tempTowerType];
+                //
+                tempCirc = new Ellipse();
+                tempCirc.Opacity = 0.5;
+                tempCirc.Fill = Brushes.White;
+                //
+                
+                if (tempTowerType == 0)
+                {
+                    tempRect.Height = 35;
+                    tempRect.Width = 35;
+                    tempCost = 150;
+                    //
+                    tempCirc.Width = 100 * 2 + 1;
+                    tempCirc.Height = 100 * 2 + 1;
+                    //
+                }
+                else if (tempTowerType == 1)
+                {
+                    tempRect.Height = 35;
+                    tempRect.Width = 35;
+                    tempCost = 350;
+                    //
+                    tempCirc.Width = 300 * 2 + 1;
+                    tempCirc.Height = 300 * 2 + 1;
+                    //
+                }
+                else if (tempTowerType == 2)
+                {
+                    tempRect.Height = 45;
+                    tempRect.Width = 70;
+                    tempCost = 600;
+                    //
+                    tempCirc.Width = 80 * 2 + 1;
+                    tempCirc.Height = 80 * 2 + 1;
+                    //
+                }
+                else
+                {
+                    tempRect.Height = 70;
+                    tempRect.Width = 70;
+                    tempCost = 2000;
+                    //
+                    tempCirc.Width = 100 * 2 + 1;
+                    tempCirc.Height = 100 * 2 + 1;
+                    //
+                }
+                //
+                cBackground.Children.Add(tempCirc);
+                //
+                cBackground.Children.Add(tempRect);
+                
             }
-            tempRect = new Rectangle();
-            tempRect.Fill = towerFill[tempTowerType];
-            if (tempTowerType < 2)
-            {
-                tempRect.Height = 35;
-                tempRect.Width = 35;
-                tempCost = 100;
-            }
-            else if (tempTowerType == 2)
-            {
-                tempRect.Height = 45;
-                tempRect.Width = 70;
-                tempCost = 100;
-            }
-            else
-            {
-                tempRect.Height = 70;
-                tempRect.Width = 70;
-                tempCost = 100;
-            }
-            cBackground.Children.Add(tempRect);
         }
     }
 }
